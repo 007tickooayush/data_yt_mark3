@@ -1,6 +1,7 @@
 package com.reazon.sparksql
 
 import org.apache.log4j.{Level, Logger}
+import org.apache.spark.SparkFiles
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
@@ -24,11 +25,8 @@ object NOAAData {
       StructField("value", DoubleType)
     ))
 
-    //val data2017: DataFrame = spark.read.schema(tschema).option("dateFormat", "yyyyMMdd").csv("C:\\Users\\ayush\\hadoop-3.2.2\\bin\\2017.csv")
-    val data2017: DataFrame = spark.read.schema(tschema).option("dateFormat", "yyyyMMdd").csv("D:\\91374\\hadoop-3.2.2\\2017.csv")
-
     spark.sparkContext.addFile("src\\data\\2017.csv")
-//    val data2017: DataFrame = spark.read.schema(tschema).option("dateFormat", "yyyyMMdd").csv(SparkFiles.get("2017.csv"))
+    val data2017: DataFrame = spark.read.schema(tschema).option("dateFormat", "yyyyMMdd").csv(SparkFiles.get("2017.csv"))
     //      .csv("src\\data\\2017.csv")
 
     //    data2017.show()
