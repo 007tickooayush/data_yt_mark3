@@ -1,6 +1,5 @@
 package com.reazon.sparksql
 
-import org.apache.log4j.{Level, Logger}
 import org.apache.spark.SparkFiles
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -12,7 +11,7 @@ object NOAAData {
 
     //    in order to evade unnecessary info logs
     spark.sparkContext.setLogLevel("WARN")
-    Logger.getLogger("org").setLevel(Level.FATAL)
+    //    Logger.getLogger("org").setLevel(Level.FATAL)
 
     //  importing the implicits for reference
     import spark.implicits._
@@ -35,21 +34,25 @@ object NOAAData {
     //    limited the data for getting output with minimal configuration
     val tmax2017 = data2017.filter($"mtype" === "TMAX")
       .limit(1000)
-      .select('sid, 'date, 'value)
-//      .drop('mytpe)
+      //      .select('sid, 'date, 'value)
+      //      .drop('mytpe)
       .withColumnRenamed("value", "tmax")
 
 
     val tmin2017 = data2017.filter('mtype === "TMIN")
       .limit(1000)
-      .select('sid, 'date, 'value)
-//      .drop('mytpe)
+      //      .select('sid, 'date, 'value)
+      //      .drop('mytpe)
       .withColumnRenamed("value", "tmin")
 
     //    joining temps together
     val combinedTemps2017 = tmax2017.join(tmin2017, Seq("sid", "date"))
-    //      .select('sid, 'date, 'tmax, 'tmin)
-    combinedTemps2017.show()
+      .select('sid, 'date, 'tmax, 'tmin)
+    //    combinedTemps2017.show()
+
+//    calculating average temperature for each area code
+    val averageTemps2017 = combinedTemps2017.select('sid, 'date, ('tmax + 'tmin) / 20*1.8+32).withColumnRenamed("('tmax + 'tmin) / 20*1.8+32", "tavg")
+    averageTemps2017.show(20)
 
     spark.stop()
 
