@@ -49,11 +49,11 @@ object NOAAData {
 
     sc.addFile("src\\data\\ghcnd-stations.txt")
     val stationRDD = sc.textFile(SparkFiles.get("ghcnd-stations.txt")).map { line =>
-      val id = line.substring(0, 11)
+      val sid = line.substring(0, 11)
       val lat = line.substring(12, 20).toDouble
       val lon = line.substring(21, 30).toDouble
-      val name = line.substring(41, 50)
-      Row(id, lat, lon, name)
+      val name = line.substring(41, 71)
+      Row(sid, lat, lon, name)
     }
 
     //    using the custom created schema convert the RDD[Row] to DataFrame
@@ -79,15 +79,18 @@ object NOAAData {
     //    combinedTemps2017.show()
 
     //    calculating average temperature for each area code
-    val dailyTemps2017 = combinedTemps2017.select('sid, 'date, ('tmax + 'tmin) / 20 * 1.8 + 32).withColumnRenamed("((((tmax + tmin) / 20) * 1.8) + 32)", "tavg")
+    val dailyTemps2017 = combinedTemps2017.select('sid, 'date, ('tmax + 'tmin) / 20 * 1.8 + 32 as "tavg")
+    //      .withColumnRenamed("((((tmax + tmin) / 20) * 1.8) + 32)", "tavg")
     //    dailyTemps2017.show(20)
 
-    val stationTemps2017 = dailyTemps2017.groupBy('sid).agg(avg('tavg))
-    //    stationTemps2017.show()
+    val stationTemp2017 = dailyTemps2017.groupBy('sid).agg(avg('tavg) as "tavg")
+    //    stationTemp2017.show()
 
     //    stations.show()
 
-    val joinedData2017 = stationTemps2017.join(stations, "sid")
+    //    stations.schema.printTreeString()
+    //    stationTemp2017.schema.printTreeString()
+    val joinedData2017 = stationTemp2017.join(stations)
     joinedData2017.show()
 
     spark.stop()
