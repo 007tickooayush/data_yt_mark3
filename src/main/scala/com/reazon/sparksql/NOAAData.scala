@@ -2,7 +2,6 @@ package com.reazon.sparksql
 
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.SparkFiles
-import org.apache.spark.sql.functions.avg
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
@@ -59,39 +58,48 @@ object NOAAData {
     //    using the custom created schema convert the RDD[Row] to DataFrame
     val stations = spark.createDataFrame(stationRDD, sschema).cache()
 
-    //    limited the data for getting output with minimal configuration
-    val tmax2017 = data2017.filter($"mtype" === "TMAX")
-      .select('sid, 'date, 'value)
-      .limit(1000)
-      //      .drop('mytpe)
-      .withColumnRenamed("value", "tmax")
+    //    putting the data2017 as SQL View since data2017 is not recognizable in SQL (only a scala variable)
+    data2017.createOrReplaceTempView("data2017")
+    //    testing a pure SQL query
+    val pureSQL = spark.sql(
+      """
+        SELECT sid ,date, value as tmax FROM data2017 where mtype = "TMAX"
+        """.stripMargin)
+    pureSQL.show()
 
-
-    val tmin2017 = data2017.filter('mtype === "TMIN")
-      .select('sid, 'date, 'value)
-      .limit(1000)
-      //      .drop('mytpe)
-      .withColumnRenamed("value", "tmin")
-
-    //    joining temps together
-    val combinedTemps2017 = tmax2017.join(tmin2017, Seq("sid", "date"))
-    //      .select('sid, 'date, 'tmax, 'tmin)
-    //    combinedTemps2017.show()
-
-    //    calculating average temperature for each area code
-    val dailyTemps2017 = combinedTemps2017.select('sid, 'date, ('tmax + 'tmin) / 20 * 1.8 + 32 as "tavg")
-    //      .withColumnRenamed("((((tmax + tmin) / 20) * 1.8) + 32)", "tavg")
-    //    dailyTemps2017.show(20)
-
-    val stationTemp2017 = dailyTemps2017.groupBy('sid).agg(avg('tavg) as "tavg")
-    //    stationTemp2017.show()
-
-    //    stations.show()
-
-    //    stations.schema.printTreeString()
-    //    stationTemp2017.schema.printTreeString()
-    val joinedData2017 = stationTemp2017.join(stations)
-    joinedData2017.show()
+    //    //    limited the data for getting output with minimal configuration
+    //    val tmax2017 = data2017.filter($"mtype" === "TMAX")
+    //      .select('sid, 'date, 'value)
+    //      .limit(1000)
+    //      //      .drop('mytpe)
+    //      .withColumnRenamed("value", "tmax")
+    //
+    //
+    //    val tmin2017 = data2017.filter('mtype === "TMIN")
+    //      .select('sid, 'date, 'value)
+    //      .limit(1000)
+    //      //      .drop('mytpe)
+    //      .withColumnRenamed("value", "tmin")
+    //
+    //    //    joining temps together
+    //    val combinedTemps2017 = tmax2017.join(tmin2017, Seq("sid", "date"))
+    //    //      .select('sid, 'date, 'tmax, 'tmin)
+    //    //    combinedTemps2017.show()
+    //
+    //    //    calculating average temperature for each area code
+    //    val dailyTemps2017 = combinedTemps2017.select('sid, 'date, ('tmax + 'tmin) / 20 * 1.8 + 32 as "tavg")
+    //    //      .withColumnRenamed("((((tmax + tmin) / 20) * 1.8) + 32)", "tavg")
+    //    //    dailyTemps2017.show(20)
+    //
+    //    val stationTemp2017 = dailyTemps2017.groupBy('sid).agg(avg('tavg) as "tavg")
+    //    //    stationTemp2017.show()
+    //
+    //    //    stations.show()
+    //
+    //    //    stations.schema.printTreeString()
+    //    //    stationTemp2017.schema.printTreeString()
+    //    val joinedData2017 = stationTemp2017.join(stations)
+    //    joinedData2017.show()
 
     spark.stop()
 
