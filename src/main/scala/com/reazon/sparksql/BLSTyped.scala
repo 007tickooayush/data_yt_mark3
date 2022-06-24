@@ -9,6 +9,10 @@ case class Series(sid: String, are: String, measure: String, title: String)
 
 case class LAData(id: String, year: Int, period: String, value: Double)
 
+case class ZipData(zipCode: String, lat: Double, lng: Double, city: String, state: String, county: String)
+
+case class ZipCountyData(lat: Double, lng: Double, state: String, county: String)
+
 object BLSTyped {
   def main(args: Array[String]): Unit = {
 
@@ -31,12 +35,12 @@ object BLSTyped {
     sc.addFile("src\\data\\la.data.64.County.csv")
 
     val countyData = spark.read
-      .schema(Encoders.product[LAData].schema) // fetch the schema for acccurate mapping
+      .schema(Encoders.product[LAData].schema) // fetch the schema for accurate mapping
       .option("header", value = true)
       .option("delimiter", "\t")
       .csv(SparkFiles.get("la.data.64.County.csv"))
       .select(trim('id) as "id", 'year, 'period, 'value)
-      .as[LAData] // import the data as specified in Case Class
+      .as[LAData] // to get the data in form of DataSet[T] rather than DataFrame
       .sample(withReplacement = false, 0.1) // sampling data
       .cache()
     //    countyData.show()
@@ -52,7 +56,26 @@ object BLSTyped {
     //    renamed the id to sid in Series and id from LAData using joinWith returns DataSet
     val join1 = countyData.joinWith(series, 'id === 'sid)
     //    join1.show()
-    println(join1.first())
+    //    println(join1.first())
+
+
+    // LINK:
+    // https://simplemaps.com/data/us-zips
+    sc.addFile("src\\data\\uszips.csv")
+    val zipData = spark.read.schema(Encoders.product[ZipData].schema)
+      .option("header", value = true)
+      .csv(SparkFiles.get("uszips.csv")) // diff file
+      .as[ZipData] // to get the data in form of DataSet[T] rather than DataFrame
+      .filter('lat.isNotNull)
+      .cache()
+    //    zipData.show()
+
+    val countyLocs = zipData.groupByKey(zd => zd.county -> zd.state)
+      .agg(avg('lat).as[Double], avg('lng).as[Double])
+      .map {
+        case ((county, state), lat, lng) => ZipCountyData(lat, lng, state, county)
+      }
+    countyLocs.show()
 
     spark.stop()
   }
