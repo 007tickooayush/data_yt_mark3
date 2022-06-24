@@ -11,7 +11,7 @@ case class LAData(id: String, year: Int, period: String, value: Double)
 object BLSTyped {
   def main(args: Array[String]): Unit = {
 
-    val spark: SparkSession = SparkSession.builder().master("local[*]").appName("NOAA Data DATA YT MARK3").getOrCreate()
+    val spark: SparkSession = SparkSession.builder().master("local[*]").appName("BLS Data DATA YT MARK4").getOrCreate()
 
     val sc = spark.sparkContext
 
@@ -36,7 +36,15 @@ object BLSTyped {
       .csv(SparkFiles.get("la.data.64.County.txt"))
       .as[LAData] // import the data as specified in Case Class
 
-    countyData.show()
+    //    countyData.show()
+
+    sc.addFile("src\\data\\la.series.tsv")
+    val series = spark.read.textFile(SparkFiles.get("la.series.tsv")).map { line =>
+      val p = line.split("\t")
+      Series(p(0), p(2), p(3), p(6))
+    }.cache()
+
+    series.show()
 
     spark.stop()
   }
