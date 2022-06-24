@@ -63,7 +63,12 @@ object NOAAData {
     //    testing a pure SQL query
     val pureSQL = spark.sql(
       """
-        SELECT sid ,date, value as tmax FROM data2017 where mtype = "TMAX"
+         SELECT sid, date ,(tmax+tmin)/20*1.8+32 as tavg
+         FROM
+        (SELECT sid ,date, value as tmax FROM data2017 where mtype = "TMAX" LIMIT 1000)
+        JOIN
+        (SELECT sid ,date, value as tmin FROM data2017 where mtype = "TMIN" LIMIT 1000)
+        USING (sid, date)
         """.stripMargin)
     pureSQL.show()
 
