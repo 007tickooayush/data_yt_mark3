@@ -7,7 +7,9 @@ import org.apache.spark.sql.{Encoders, SparkSession}
 import org.apache.spark.{SparkContext, SparkFiles}
 
 
-case class CountyWeight(county_fips: Map[String, Double])
+case class CountyWeight(county_weights_map: Map[Int, Double])
+
+case class ZipCountyWeight(zip: String, countyWeight: CountyWeight)
 
 case class ZipData(
                     zip: String,
@@ -59,24 +61,31 @@ object Demo {
     //    zipData.show()
     //    zipData.schema.printTreeString()
 
-    val mappedWeight = zipData.select("county_weights").map { row =>
-      val arr = row.toString()
-        .replace("\"", "")
-        .replaceAll("[\\[\\](){}]", "")
-        .split("\\s*,\\s*")
+    //    created separate Dataset for CountyWeights
+    val mappedWeight =
+      zipData.select("zip","county_weights")
+        .map { row =>
+          val arr = row.get(1).toString
+            .replace("\"", "")
+            .replaceAll("[\\[\\](){}]", "")
+            .split("\\s*,\\s*")
 
-      val regex = "\\s*:\\s*"
-      val weights = arr.map {data =>
-        val fip = data.split(regex)(0)
-        val weight = data.split(regex)(1)
+          val regex = "\\s*:\\s*"
+          val weights = arr.map { data =>
+            val fip = data.split(regex)(0).toInt
+            val weight = data.split(regex)(1).toDouble
 
-        (fip,weight)
-      }.toSeq
+            (fip, weight)
+          }.toMap
+          //      weights
+          (row.get(0).toString,CountyWeight(weights))
+        }
+        .withColumnRenamed("_1","zipCode")
+        .withColumnRenamed("_2","county_weights_map")
 
-      weights
-    }
-
-    println(mappedWeight.first())
+    //    println(mappedWeight.first())
+    mappedWeight.schema.printTreeString()
+    mappedWeight.show()
 
     //    when writing JSON inside csv always use escape sequence
     //    frame.write.option("quoteAll","true").option("escape", "\"").csv("csvFileName")
