@@ -5,7 +5,7 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.{Encoders, SparkSession}
 import org.apache.spark.{SparkContext, SparkFiles}
 
-case class CountyWeight(county_fips: Integer, value: Double)
+case class CountyWeight(county_fips: Map[Integer, Double])
 
 case class ZipData(
                     zip: String,
@@ -20,7 +20,7 @@ case class ZipData(
                     density: Double,
                     county_fips: Integer,
                     county_name: String,
-//                    county_weights: CountyWeight, // need nested mapping for accuracy
+                    county_weights: String, // need nested mapping for accuracy
                     county_names_all: String,
                     county_fips_all: String,
                     imprecise: Boolean,
@@ -41,24 +41,21 @@ object Demo {
 
     //  importing the implicits for reference
     import spark.implicits._
-    //    val zipSchema = StructType(Array(
-    //      StructField("zipCode",StringType),
-    //      StructField("lat",DoubleType),
-    //      StructField("lng",DoubleType),
-    //      StructField("population",IntegerType),
-    //      StructField("density",DoubleType)
-    //    ))
 
     sc.addFile("src\\data\\uszips_raw.csv")
-    val zipHeaders = spark.read
+    val zipData = spark.read
       .option("header", value = true)
-      //      .option("delimiter", ",")
+      //      .option("quoteAll", value = true)
+      .option("escape", "\"")
+      .schema(Encoders.product[ZipData].schema)
       //      .schema(zipSchema)
-            .schema(Encoders.product[ZipData].schema)
       .csv(SparkFiles.get("uszips_raw.csv"))
+      .cache()
 
-    zipHeaders.show(10)
+    zipData.show(10)
 
+    //    when writing JSON inside csv always use escape sequence
+    //    frame.write.option("quoteAll","true").option("escape", "\"").csv("csvFileName")
 
     spark.stop()
   }
