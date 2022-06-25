@@ -1,11 +1,13 @@
 package com.reazon.demo
 
 import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{Encoders, SparkSession}
 import org.apache.spark.{SparkContext, SparkFiles}
 
-case class CountyWeight(county_fips: Map[Integer, Double])
+
+case class CountyWeight(county_fips: Map[String, Double])
 
 case class ZipData(
                     zip: String,
@@ -50,9 +52,31 @@ object Demo {
       .schema(Encoders.product[ZipData].schema)
       //      .schema(zipSchema)
       .csv(SparkFiles.get("uszips_raw.csv"))
+      .filter('lat.isNotNull)
+      .as[ZipData]
       .cache()
 
-    zipData.show(10)
+    //    zipData.show()
+    //    zipData.schema.printTreeString()
+
+    val mappedWeight = zipData.select("county_weights").map { row =>
+      val arr = row.toString()
+        .replace("\"", "")
+        .replaceAll("[\\[\\](){}]", "")
+        .split("\\s*,\\s*")
+
+      val regex = "\\s*:\\s*"
+      val weights = arr.map {data =>
+        val fip = data.split(regex)(0)
+        val weight = data.split(regex)(1)
+
+        (fip,weight)
+      }.toSeq
+
+      weights
+    }
+
+    println(mappedWeight.first())
 
     //    when writing JSON inside csv always use escape sequence
     //    frame.write.option("quoteAll","true").option("escape", "\"").csv("csvFileName")
