@@ -63,7 +63,7 @@ object Demo {
 
     //    created separate Dataset for CountyWeights
     val mappedWeight =
-      zipData.select("zip","county_weights")
+      zipData.select("zip", "county_weights")
         .map { row =>
           val arr = row.get(1).toString
             .replace("\"", "")
@@ -78,12 +78,14 @@ object Demo {
             (fip, weight)
           }.toMap
           //      weights
-          (row.get(0).toString,CountyWeight(weights))
+          (row.get(0).toString, CountyWeight(weights))
         }
-        .withColumnRenamed("_1","zipCode")
-        .withColumnRenamed("_2","county_weights_map")
+        .withColumnRenamed("_1", "zip")
+        .withColumnRenamed("_2", "countyWeight")
+        .as[ZipCountyWeight]
+        .cache()
 
-    //    println(mappedWeight.first())
+//    println(mappedWeight.first())
     mappedWeight.schema.printTreeString()
     mappedWeight.show()
 
